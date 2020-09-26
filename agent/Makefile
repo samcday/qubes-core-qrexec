@@ -3,6 +3,8 @@ CC ?= gcc
 PANDOC ?= pandoc
 BACKEND_VMM ?= xen
 DESTDIR ?= /
+BINDIR ?= /usr/bin
+LIBDIR ?= /usr/lib
 .SUFFIXES:
 override os := $(shell lsb_release -is)
 override QUBES_CFLAGS := -I. -I../libqrexec -g -O2 -Wall -Wextra -Werror \
@@ -32,14 +34,14 @@ endif
 
 install: all
 	install -d $(DESTDIR)/etc/qubes-rpc $(DESTDIR)/usr/lib/qubes \
-		$(DESTDIR)/usr/bin $(DESTDIR)/usr/share/man/man1
-	install qrexec-agent $(DESTDIR)/usr/lib/qubes
-	install qrexec-client-vm $(DESTDIR)/usr/bin
+		$(DESTDIR)$(BINDIR) $(DESTDIR)/usr/share/man/man1
+	install qrexec-agent $(DESTDIR)$(LIBDIR)/qubes
+	install qrexec-client-vm $(DESTDIR)$(BINDIR)
 	install -d $(DESTDIR)/usr/share/man/man1
 	install qrexec-client-vm.1.gz $(DESTDIR)/usr/share/man/man1
-	ln -s ../../bin/qrexec-client-vm $(DESTDIR)/usr/lib/qubes/qrexec-client-vm
-	ln -s ../../bin/qrexec-client-vm $(DESTDIR)/usr/lib/qubes/qrexec_client_vm
-	install qrexec-fork-server $(DESTDIR)/usr/bin
+	ln -s ../../bin/qrexec-client-vm $(DESTDIR)$(LIBDIR)/qubes/qrexec-client-vm
+	ln -s ../../bin/qrexec-client-vm $(DESTDIR)$(LIBDIR)/qubes/qrexec_client_vm
+	install qrexec-fork-server $(DESTDIR)$(BINDIR)
 ifeq ($(os), Debian)
 	install -D -m 0644 qrexec.pam.debian $(DESTDIR)/etc/pam.d/qrexec
 else ifeq ($(os), Ubuntu)

@@ -6,6 +6,10 @@ override QUBES_CFLAGS:=-I../libqrexec -g -O2 -Wall -Wextra -Werror -pie -fPIC \
 override LDFLAGS += -pie -Wl,-z,relro,-z,now -L../libqrexec
 override LDLIBS += $(shell pkg-config --libs vchan-$(BACKEND_VMM)) -lqrexec-utils
 
+BINDIR ?= /usr/bin
+LIBDIR ?= /usr/lib
+SBINDIR?= /usr/sbin
+
 MAKEFLAGS := -r
 .SUFFIXES:
 
@@ -13,11 +17,11 @@ all: qrexec-daemon qrexec-client
 clean:
 	rm -f *.o *~ qrexec-daemon qrexec-client *.o.dep
 install: all
-	install -d $(DESTDIR)/usr/sbin $(DESTDIR)/usr/bin
-	install -t $(DESTDIR)/usr/sbin -m 755 qrexec-daemon
-	install -t $(DESTDIR)/usr/bin -m 755 qrexec-client
-	install -d $(DESTDIR)/usr/lib/qubes
-	ln -s ../../bin/qrexec-client $(DESTDIR)/usr/lib/qubes/qrexec-client
+	install -d $(DESTDIR)$(SBINDIR) $(DESTDIR)$(BINDIR)
+	install -t $(DESTDIR)$(SBINDIR) -m 755 qrexec-daemon
+	install -t $(DESTDIR)$(BINDIR) -m 755 qrexec-client
+	install -d $(DESTDIR)$(LIBDIR)/qubes
+	ln -s $(DESTDIR)$(BINDIR)/qrexec-client $(DESTDIR)$(LIBDIR)/qubes/qrexec-client
 .PHONY: all clean install
 
 qrexec-daemon qrexec-client: %: %.o
