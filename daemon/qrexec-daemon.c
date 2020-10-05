@@ -37,6 +37,10 @@
 #include "qrexec.h"
 #include "libqrexec-utils.h"
 
+#ifdef HAVE_SYSTEMD
+#include <systemd/sd-daemon.h>
+#endif
+
 #define QREXEC_MIN_VERSION QREXEC_PROTOCOL_V2
 #define QREXEC_SOCKET_PATH "/var/run/qubes/policy.sock"
 
@@ -356,9 +360,13 @@ void init(int xid)
         vchan_port_notify_client[i] = VCHAN_PORT_UNUSED;
     }
 
-    atexit(unlink_qrexec_socket);
-    qrexec_daemon_unix_socket_fd =
-        create_qrexec_socket(xid, remote_domain_name);
+    if (sd_listen_fds(0) == 1) {
+        qrexec_daemon_unix_socket_fd = SD_LISTEN_FDS_START + 0;
+    } else {
+        atexit(unlink_qrexec_socket);
+        qrexec_daemon_unix_socket_fd =
+            create_qrexec_socket(xid, remote_domain_name);
+    }
 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, sigchld_handler);
