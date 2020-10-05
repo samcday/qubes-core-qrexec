@@ -65,6 +65,7 @@ install-dom0: all-dom0
 	install -t $(DESTDIR)/etc/qubes/policy.d/include -m 664 policy.d/include/*
 	install -d $(DESTDIR)$(LIBDIR)/systemd/system -m 755
 	install -t $(DESTDIR)$(LIBDIR)/systemd/system -m 644 systemd/qubes-qrexec-policy-daemon.service
+	install -t $(DESTDIR)$(LIBDIR)/systemd/system -m 644 systemd/qubes-qrexec-policy-daemon.socket
 .PHONY: install-dom0
 
 

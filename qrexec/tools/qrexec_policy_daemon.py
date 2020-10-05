@@ -24,6 +24,11 @@ import pathlib
 import asyncio
 import logging
 import os
+import socket
+import sys
+
+import systemd.daemon
+from systemd.journal import JournalHandler
 
 from .qrexec_policy_exec import handle_request
 from .. import POLICYPATH, POLICYSOCKET
@@ -103,6 +108,17 @@ async def handle_client_connection(log, policy_cache,
 async def start_serving(args=None):
     args = argparser.parse_args(args)
 
+    if systemd.daemon.booted():
+        def handle_exception(exc_type, exc_value, exc_traceback):
+            if issubclass(exc_type, KeyboardInterrupt):
+                sys.__excepthook__(exc_type, exc_value, exc_traceback)
+                return
+            logging.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+        sys.excepthook = handle_exception
+
+        logging.root.addHandler(JournalHandler(
+            SYSLOG_IDENTIFIER="qrexec-policy-daemon"))
+
     logging.basicConfig(format="%(message)s")
     log = logging.getLogger('policy')
     log.setLevel(logging.INFO)
@@ -110,11 +126,21 @@ async def start_serving(args=None):
     policy_cache = PolicyCache(args.policy_path)
     policy_cache.initialize_watcher()
 
+    server_args = {}
+    sd_listen_fds = systemd.daemon.listen_fds()
+    if sd_listen_fds:
+        server_args['sock'] = socket.fromfd(sd_listen_fds[0], socket.AF_UNIX,
+            socket.SOCK_STREAM)
+    else:
+        server_args['path'] = args.socket_path
+
     server = await asyncio.start_unix_server(
         functools.partial(
             handle_client_connection, log, policy_cache),
-        path=args.socket_path)
-    os.chmod(args.socket_path, 0o660)
+        **server_args)
+
+    if 'path' in server_args:
+        os.chmod(args.socket_path, 0o660)
 
     await server.serve_forever()
 
