@@ -1161,6 +1161,13 @@ int main(int argc, char **argv)
     sigprocmask(SIG_BLOCK, &selectmask, NULL);
     sigemptyset(&selectmask);
 
+
+#ifdef HAVE_SYSTEMD
+    if (getenv("NOTIFY_SOCKET")) {
+        sd_notify(1, "READY=1");
+    }
+#endif
+
     /*
      * The main event loop. Waits for one of the following events:
      * - message from client
