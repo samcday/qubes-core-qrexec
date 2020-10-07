@@ -35,10 +35,29 @@
 #include <assert.h>
 #include <getopt.h>
 #include "qrexec.h"
-#include "libqrexec-utils.h"
 
+#include "libqrexec-utils.h"
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
+#include <systemd/sd-journal.h>
+#include <syslog.h>
+
+// Use systemd-journal rather than logging routines from libqrexec.
+#undef DEBUG
+#undef INFO
+#undef WARNING
+#undef ERROR
+#undef LOG
+#undef LOGE
+#undef PERROR
+
+#define LOG sd_journal_print
+#define PERROR sd_journal_perror
+#define DEBUG    LOG_DEBUG
+#define INFO     LOG_INFO
+#define WARNING  LOG_WARNING
+#define ERROR    LOG_ERR
+
 #endif
 
 #define QREXEC_MIN_VERSION QREXEC_PROTOCOL_V2
@@ -174,7 +193,7 @@ int create_qrexec_socket(int domid, const char *domname)
     /* When running as root, make the socket accessible; perms on /var/run/qubes still apply */
     umask(0);
     if (symlink(socket_address, link_to_socket_name)) {
-        PERROR("symlink(%s,%s)", socket_address, link_to_socket_name);
+        PERROR("symlink");
     }
     int fd = get_server_socket(socket_address);
     umask(0077);
@@ -265,6 +284,8 @@ void init(int xid)
     int startup_timeout = MAX_STARTUP_TIME_DEFAULT;
     const char *startup_timeout_str = NULL;
 
+    LOG(DEBUG, "init start");
+
     if (xid <= 0) {
         LOG(ERROR, "domain id=0?");
         exit(1);
@@ -332,12 +353,14 @@ void init(int xid)
         }
     }
 
+    LOG(DEBUG, "libvchan_client_init");
     vchan = libvchan_client_init(xid, VCHAN_BASE_PORT);
     if (!vchan) {
         PERROR("cannot connect to qrexec agent");
         exit(1);
     }
 
+    LOG(DEBUG, "handle_agent_hello");
     protocol_version = handle_agent_hello(vchan, remote_domain_name);
     if (protocol_version < 0) {
         exit(1);
@@ -1160,7 +1183,6 @@ int main(int argc, char **argv)
     sigaddset(&selectmask, SIGCHLD);
     sigprocmask(SIG_BLOCK, &selectmask, NULL);
     sigemptyset(&selectmask);
-
 
 #ifdef HAVE_SYSTEMD
     if (getenv("NOTIFY_SOCKET")) {
